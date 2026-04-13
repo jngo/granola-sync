@@ -1,0 +1,16 @@
+# Exported data
+granola_export/
+granola_markdown/
+transcripts/
+
+# Cache
+.cache/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# macOS
+.DS_Store
