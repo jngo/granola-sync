@@ -1,16 +1,14 @@
 # granola-export
 
-Scripts for exporting and converting [Granola](https://www.granola.ai) meeting transcripts.
+Export [Granola](https://www.granola.ai) meeting transcripts as Markdown files, with YAML front matter suitable for use in an Obsidian vault or with AI agents.
 
 Requires a Granola account on the **Business or Enterprise** plan.
 
 ---
 
-## Scripts
+## Usage
 
-### `granola.py` — Export + convert in one step
-
-Fetches all your meeting notes from the Granola API and writes them as Markdown files. JSON responses are cached locally so re-runs only fetch new or changed notes.
+### Standalone script
 
 ```bash
 GRANOLA_API_KEY=grn_... python granola.py --output-dir ./transcripts
@@ -18,38 +16,35 @@ GRANOLA_API_KEY=grn_... python granola.py --output-dir ./transcripts
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--output-dir` | `.` | Directory to write Markdown files. A `.cache/` subdirectory is created here for raw JSON. |
+| `--output-dir` | `.` | Directory to write Markdown files. A `.cache/` subdirectory stores raw JSON, keyed by note ID. |
 | `--overwrite` | off | Re-fetch and re-render all notes, ignoring the cache. |
 
----
+Re-runs skip already-cached notes, so only new transcripts are fetched.
 
-### `export_transcripts.py` + `json_to_markdown.py` — Two-step pipeline
+### Claude Code skill
 
-If you prefer to keep the raw JSON and Markdown conversion as separate steps:
+`SKILL.md` defines a [Claude Code](https://claude.ai/code) skill that wraps `granola.py`. Install it to use `/granola-sync` directly from Claude Code:
 
-**Step 1: Export JSON**
 ```bash
-GRANOLA_API_KEY=grn_... python export_transcripts.py --output-dir ./granola_export
+# 1. Copy the skill into your Claude skills directory
+cp -r . ~/.claude/skills/granola-sync
+
+# 2. Add your API key
+cp .env.example ~/.claude/skills/granola-sync/.env
+# Edit .env and set GRANOLA_API_KEY
+
+# 3. Set up the venv
+python3 -m venv ~/.claude/skills/granola-sync/scripts/.venv
+~/.claude/skills/granola-sync/scripts/.venv/bin/pip install requests -q
 ```
 
-**Step 2: Convert to Markdown**
-```bash
-python json_to_markdown.py --input-dir ./granola_export --output-dir ./granola_markdown
-```
-
-| Flag | Default | Description |
-|------|---------|-------------|
-| `export_transcripts.py --output-dir` | `./granola_export` | Where to save JSON files. |
-| `export_transcripts.py --no-skip-existing` | off | Re-download and overwrite existing files. |
-| `json_to_markdown.py --input-dir` | `./granola_export` | Where to read JSON files from. |
-| `json_to_markdown.py --output-dir` | `./granola_markdown` | Where to write Markdown files. |
-| `json_to_markdown.py --overwrite` | off | Overwrite existing Markdown files. |
+Then in Claude Code, run `/granola-sync` and follow the prompts.
 
 ---
 
 ## Output format
 
-Each note is saved as a Markdown file with YAML front matter:
+Each note is written as:
 
 ```
 YYYY-MM-DD <Title>.md
@@ -74,9 +69,10 @@ source: Granola
 **Them**: ...
 ```
 
-- `project` is derived from the note's folder name in Granola, slugified to kebab-case.
-- `**You**` is audio captured from your microphone; `**Them**` is system audio (other participants).
+- `project` is the note's Granola folder name, slugified to kebab-case.
+- `**You**` is audio from your microphone; `**Them**` is system audio (other participants).
 - Consecutive segments from the same speaker are merged into single utterances.
+- Colons in titles are replaced: `Title: Subtitle` → `Title — Subtitle`, `1:1` → `1-1`.
 
 ---
 
@@ -86,16 +82,12 @@ source: Granola
 pip install requests
 ```
 
-Get your API key from Granola → Settings → API → Create new key. The key should be set as an environment variable:
-
-```bash
-export GRANOLA_API_KEY=grn_...
-```
+Get your API key from Granola → Settings → API → Create new key.
 
 ---
 
 ## Rate limits
 
-The Granola API allows 25 requests per 5 seconds (burst) and 5 requests per second (sustained). The scripts add a 250ms delay between requests to stay within limits. If you hit a 429, the script waits 10 seconds before retrying.
+25 requests per 5 seconds (burst), 5 per second (sustained). The script adds a 250ms delay between requests. On a 429, it waits 10 seconds before retrying.
 
-Some notes may return a 502 error — this is a server-side issue with that specific note and is not recoverable from the client side.
+Some notes may return a 502 — this is a server-side issue with the specific note and is not recoverable from the client.

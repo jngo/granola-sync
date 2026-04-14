@@ -12,5 +12,11 @@ __pycache__/
 *.pyc
 *.pyo
 
+# Environment
+.env
+
+# Claude Code project settings (may contain secrets)
+.claude/
+
 # macOS
 .DS_Store
