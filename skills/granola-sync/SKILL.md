@@ -1,7 +1,7 @@
 ---
 name: granola-sync
 description: Exports Granola meeting transcripts as Markdown to a local directory. Use when the user wants to export, sync, or update their Granola meeting transcripts.
-compatibility: Requires Python 3.x and the requests library (installed automatically via venv).
+compatibility: Requires Python 3.x (standard library only, no dependencies).
 allowed-tools: Bash
 metadata:
   author: jngo
@@ -24,13 +24,13 @@ Then open `.env` and set `GRANOLA_API_KEY` to a valid key (generated at Granola 
 
 ## Setup
 
-On first run, install dependencies and register the CLI:
+On first run, register the CLI:
 
 ```bash
 python3 ~/.claude/skills/granola-sync/scripts/granola.py --setup
 ```
 
-This creates a venv at `~/.local/share/granola-sync/venv`, installs `requests`, and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
+This makes the script executable and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`. No dependencies to install — uses Python's standard library only.
 
 ## Running the sync
 

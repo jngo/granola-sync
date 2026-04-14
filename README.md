@@ -8,6 +8,8 @@ Requires a Granola account on the **Business or Enterprise** plan.
 
 ## Setup
 
+Requires Python 3 (standard library only — no dependencies to install).
+
 ```bash
 # 1. Clone the repo and symlink the skill
 git clone https://github.com/jngo/granola-export.git
@@ -17,11 +19,11 @@ ln -s "$(pwd)/granola-export/skills/granola-sync" ~/.claude/skills/granola-sync
 cp granola-export/.env.example granola-export/.env
 # Edit .env and set GRANOLA_API_KEY
 
-# 3. Install dependencies and register the CLI
+# 3. Register the CLI
 python3 ~/.claude/skills/granola-sync/scripts/granola.py --setup
 ```
 
-This installs `requests` into a dedicated venv and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
+This makes the script executable and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
 
 ## Usage
 

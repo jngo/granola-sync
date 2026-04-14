@@ -17,29 +17,21 @@ import re
 import subprocess
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 # --- Setup ---
 
-VENV_DIR = Path.home() / ".local" / "share" / "granola-sync" / "venv"
 BIN_DIR = Path.home() / ".local" / "bin"
 BIN_LINK = BIN_DIR / "granola-sync"
 SCRIPT_PATH = Path(__file__).resolve()
 
 
 def setup():
-    """Install dependencies and symlink granola-sync to ~/.local/bin/."""
+    """Symlink granola-sync to ~/.local/bin/."""
     print("Setting up granola-sync...")
-
-    # Create venv
-    print(f"  Creating venv at {VENV_DIR}...")
-    VENV_DIR.mkdir(parents=True, exist_ok=True)
-    subprocess.run([sys.executable, "-m", "venv", str(VENV_DIR)], check=True)
-
-    # Install requests
-    pip = VENV_DIR / "bin" / "pip"
-    print("  Installing requests...")
-    subprocess.run([str(pip), "install", "requests", "-q"], check=True)
 
     # Make script executable
     SCRIPT_PATH.chmod(SCRIPT_PATH.stat().st_mode | 0o111)
@@ -56,32 +48,28 @@ def setup():
     print("  GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts")
 
 
-# --- Bootstrap: handle --setup before importing requests ---
-
-if "--setup" in sys.argv:
-    setup()
-    sys.exit(0)
-
-# Re-exec under venv if needed
-venv_python = VENV_DIR / "bin" / "python3"
-if venv_python.exists() and Path(sys.prefix) != VENV_DIR:
-    os.execv(str(venv_python), [str(venv_python), str(SCRIPT_PATH)] + sys.argv[1:])
-
-try:
-    import requests
-except ImportError:
-    print("requests not installed. Run: granola-sync --setup")
-    sys.exit(1)
-
-
 # --- API ---
 
 BASE_URL = "https://public-api.granola.ai"
 REQUEST_DELAY = 0.25  # seconds between requests; burst: 25 req/5s, sustained: 5 req/s
 
 
-def get_headers(api_key: str) -> dict:
-    return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
+def api_get(path: str, api_key: str, params: dict | None = None) -> dict:
+    """Make a GET request to the Granola API and return parsed JSON."""
+    url = f"{BASE_URL}{path}"
+    if params:
+        url += "?" + urllib.parse.urlencode(params)
+
+    req = urllib.request.Request(url, headers={
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json",
+    })
+
+    try:
+        with urllib.request.urlopen(req) as resp:
+            return json.loads(resp.read())
+    except urllib.error.HTTPError as e:
+        raise e
 
 
 def list_all_notes(api_key: str) -> list[dict]:
@@ -95,13 +83,7 @@ def list_all_notes(api_key: str) -> list[dict]:
         if cursor:
             params["cursor"] = cursor
 
-        resp = requests.get(
-            f"{BASE_URL}/v1/notes",
-            headers=get_headers(api_key),
-            params=params,
-        )
-        resp.raise_for_status()
-        data = resp.json()
+        data = api_get("/v1/notes", api_key, params)
 
         batch = data.get("notes", [])
         notes.extend(batch)
@@ -119,13 +101,7 @@ def list_all_notes(api_key: str) -> list[dict]:
 
 def get_note_with_transcript(api_key: str, note_id: str) -> dict:
     """Fetch a single note including its full transcript."""
-    resp = requests.get(
-        f"{BASE_URL}/v1/notes/{note_id}",
-        headers=get_headers(api_key),
-        params={"include": "transcript"},
-    )
-    resp.raise_for_status()
-    return resp.json()
+    return api_get(f"/v1/notes/{note_id}", api_key, {"include": "transcript"})
 
 
 # --- Markdown conversion ---
@@ -244,10 +220,10 @@ def export(api_key: str, output_dir: Path, skip_existing: bool) -> None:
             cache_path.write_text(json.dumps(full_note, indent=2))
             (output_dir / md_filename(full_note)).write_text(note_to_markdown(full_note))
             time.sleep(REQUEST_DELAY)
-        except requests.HTTPError as e:
-            print(f"  ERROR {e.response.status_code}: {e}")
+        except urllib.error.HTTPError as e:
+            print(f"  ERROR {e.code}: {e.reason}")
             failed.append(note_id)
-            if e.response.status_code == 429:
+            if e.code == 429:
                 print("  Rate limited — waiting 10s...")
                 time.sleep(10)
 
@@ -267,7 +243,7 @@ def main():
     parser.add_argument(
         "--setup",
         action="store_true",
-        help="Install dependencies and symlink granola-sync to ~/.local/bin/",
+        help="Symlink granola-sync to ~/.local/bin/",
     )
     parser.add_argument(
         "--output-dir",
