@@ -3,7 +3,8 @@
 Export Granola meeting transcripts as Markdown to a local directory.
 
 Usage:
-    GRANOLA_API_KEY=grn_... python granola.py [--output-dir /path/to/vault/transcripts]
+    granola-sync [--output-dir /path/to/vault/transcripts]
+    granola-sync --setup
 
 JSON responses are cached in <output-dir>/.cache/ keyed by note ID.
 Delete a note's cache file to force a re-fetch and re-render.
@@ -13,22 +14,71 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 import time
 from pathlib import Path
 
+# --- Setup ---
+
+VENV_DIR = Path.home() / ".local" / "share" / "granola-sync" / "venv"
+BIN_DIR = Path.home() / ".local" / "bin"
+BIN_LINK = BIN_DIR / "granola-sync"
+SCRIPT_PATH = Path(__file__).resolve()
+
+
+def setup():
+    """Install dependencies and symlink granola-sync to ~/.local/bin/."""
+    print("Setting up granola-sync...")
+
+    # Create venv
+    print(f"  Creating venv at {VENV_DIR}...")
+    VENV_DIR.mkdir(parents=True, exist_ok=True)
+    subprocess.run([sys.executable, "-m", "venv", str(VENV_DIR)], check=True)
+
+    # Install requests
+    pip = VENV_DIR / "bin" / "pip"
+    print("  Installing requests...")
+    subprocess.run([str(pip), "install", "requests", "-q"], check=True)
+
+    # Make script executable
+    SCRIPT_PATH.chmod(SCRIPT_PATH.stat().st_mode | 0o111)
+
+    # Symlink to ~/.local/bin/granola-sync
+    BIN_DIR.mkdir(parents=True, exist_ok=True)
+    if BIN_LINK.exists() or BIN_LINK.is_symlink():
+        BIN_LINK.unlink()
+    BIN_LINK.symlink_to(SCRIPT_PATH)
+    print(f"  Symlinked granola-sync → {SCRIPT_PATH}")
+
+    print()
+    print("Done. Make sure ~/.local/bin is in your PATH, then run:")
+    print("  GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts")
+
+
+# --- Bootstrap: handle --setup before importing requests ---
+
+if "--setup" in sys.argv:
+    setup()
+    sys.exit(0)
+
+# Re-exec under venv if needed
+venv_python = VENV_DIR / "bin" / "python3"
+if venv_python.exists() and Path(sys.prefix) != VENV_DIR:
+    os.execv(str(venv_python), [str(venv_python), str(SCRIPT_PATH)] + sys.argv[1:])
+
 try:
     import requests
 except ImportError:
-    print("requests not installed. Run: pip install requests")
+    print("requests not installed. Run: granola-sync --setup")
     sys.exit(1)
 
+
+# --- API ---
 
 BASE_URL = "https://public-api.granola.ai"
 REQUEST_DELAY = 0.25  # seconds between requests; burst: 25 req/5s, sustained: 5 req/s
 
-
-# --- API ---
 
 def get_headers(api_key: str) -> dict:
     return {"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"}
@@ -206,11 +256,18 @@ def export(api_key: str, output_dir: Path, skip_existing: bool) -> None:
         print("Failed note IDs:", failed)
 
 
+# --- CLI ---
+
 def main():
     parser = argparse.ArgumentParser(
         description="Export Granola meeting transcripts as Markdown.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="Set GRANOLA_API_KEY to your API key before running.",
+    )
+    parser.add_argument(
+        "--setup",
+        action="store_true",
+        help="Install dependencies and symlink granola-sync to ~/.local/bin/",
     )
     parser.add_argument(
         "--output-dir",
@@ -224,6 +281,10 @@ def main():
         help="Re-fetch and re-render all notes, ignoring the cache",
     )
     args = parser.parse_args()
+
+    if args.setup:
+        setup()
+        return
 
     api_key = os.environ.get("GRANOLA_API_KEY")
     if not api_key:

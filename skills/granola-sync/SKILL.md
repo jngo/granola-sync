@@ -24,24 +24,21 @@ Then open `.env` and set `GRANOLA_API_KEY` to a valid key (generated at Granola 
 
 ## Setup
 
-The script requires the `requests` library. On first run, create a venv inside the skill's `scripts/` directory:
+On first run, install dependencies and register the CLI:
 
 ```bash
-python3 -m venv ~/.claude/skills/granola-sync/scripts/.venv
-~/.claude/skills/granola-sync/scripts/.venv/bin/pip install requests -q
+python3 ~/.claude/skills/granola-sync/scripts/granola.py --setup
 ```
 
-On subsequent runs, the venv will already exist — skip setup and run directly.
+This creates a venv at `~/.local/share/granola-sync/venv`, installs `requests`, and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
 
 ## Running the sync
 
-Load the `.env` file and run the script:
+Load the `.env` file and run:
 
 ```bash
-set -a && source ~/.claude/skills/granola-sync/.env && set +a && \
-  ~/.claude/skills/granola-sync/scripts/.venv/bin/python3 \
-  ~/.claude/skills/granola-sync/scripts/granola.py \
-  --output-dir <output-dir>
+set -a && source ~/.claude/skills/granola-sync/.env && set +a
+granola-sync --output-dir <output-dir>
 ```
 
 ## Arguments

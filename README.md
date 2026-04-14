@@ -6,12 +6,29 @@ Requires a Granola account on the **Business or Enterprise** plan.
 
 ---
 
-## Usage
-
-### Standalone script
+## Setup
 
 ```bash
-GRANOLA_API_KEY=grn_... python granola.py --output-dir ./transcripts
+# 1. Clone the repo and symlink the skill
+git clone https://github.com/jngo/granola-export.git
+ln -s "$(pwd)/granola-export/skills/granola-sync" ~/.claude/skills/granola-sync
+
+# 2. Add your API key
+cp granola-export/.env.example granola-export/.env
+# Edit .env and set GRANOLA_API_KEY
+
+# 3. Install dependencies and register the CLI
+python3 ~/.claude/skills/granola-sync/scripts/granola.py --setup
+```
+
+This installs `requests` into a dedicated venv and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
+
+## Usage
+
+### CLI
+
+```bash
+GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts
 ```
 
 | Flag | Default | Description |
@@ -23,22 +40,7 @@ Re-runs skip already-cached notes, so only new transcripts are fetched.
 
 ### Claude Code skill
 
-`skills/granola-sync/SKILL.md` defines a [Claude Code](https://claude.ai/code) skill. Install it to use `/granola-sync` directly from Claude Code:
-
-```bash
-# 1. Symlink the skill into your Claude skills directory
-ln -s "$(pwd)/skills/granola-sync" ~/.claude/skills/granola-sync
-
-# 2. Add your API key
-cp .env.example ~/.claude/skills/granola-sync/.env
-# Edit .env and set GRANOLA_API_KEY
-
-# 3. Set up the venv
-python3 -m venv ~/.claude/skills/granola-sync/scripts/.venv
-~/.claude/skills/granola-sync/scripts/.venv/bin/pip install requests -q
-```
-
-Then in Claude Code, run `/granola-sync` and follow the prompts. Because it's a symlink, any updates you pull from this repo are immediately reflected in the skill.
+With the symlink in place, run `/granola-sync` in Claude Code and follow the prompts. Because it's a symlink, updates pulled from this repo are immediately reflected in the skill — no reinstall needed.
 
 ---
 
