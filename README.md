@@ -11,19 +11,18 @@ Requires a Granola account on the **Business or Enterprise** plan.
 Requires Python 3 (standard library only — no dependencies to install).
 
 ```bash
-# 1. Clone the repo and symlink the skill
+# 1. Clone the repo
 git clone https://github.com/jngo/granola-sync.git
-ln -s "$(pwd)/granola-sync/skills/granola-sync" ~/.claude/skills/granola-sync
 
 # 2. Add your API key
 cp granola-sync/.env.example granola-sync/.env
 # Edit .env and set GRANOLA_API_KEY
 
-# 3. Register the CLI
-python3 ~/.claude/skills/granola-sync/scripts/granola.py --setup
+# 3. Run setup
+python3 granola-sync/granola.py --setup
 ```
 
-This makes the script executable and symlinks `granola-sync` to `~/.local/bin/`. Make sure `~/.local/bin` is in your `PATH`.
+This makes the script executable, symlinks `granola-sync` to `~/.local/bin/`, and installs the Claude Code skill. Make sure `~/.local/bin` is in your `PATH`.
 
 ## Usage
 
@@ -42,7 +41,7 @@ Re-runs skip already-cached notes, so only new transcripts are fetched.
 
 ### Claude Code skill
 
-With the symlink in place, run `/granola-sync` in Claude Code and follow the prompts. Because it's a symlink, updates pulled from this repo are immediately reflected in the skill — no reinstall needed.
+Run `/granola-sync` in Claude Code and follow the prompts. Because the skill is a symlink back to this repo, updates pulled with `git pull` are reflected immediately — no reinstall needed.
 
 ---
 

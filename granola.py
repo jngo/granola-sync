@@ -14,7 +14,6 @@ import argparse
 import json
 import os
 import re
-import subprocess
 import sys
 import time
 import urllib.error
@@ -24,25 +23,49 @@ from pathlib import Path
 
 # --- Setup ---
 
-BIN_DIR = Path.home() / ".local" / "bin"
-BIN_LINK = BIN_DIR / "granola-sync"
 SCRIPT_PATH = Path(__file__).resolve()
+SCRIPT_DIR = SCRIPT_PATH.parent
+
+SKILL_CLIENTS = {
+    "claude": Path.home() / ".claude" / "skills",
+    "cursor": Path.home() / ".cursor" / "skills",
+}
+
+
+def ensure_command():
+    """Make the script executable and symlink it as granola-sync on PATH."""
+    SCRIPT_PATH.chmod(SCRIPT_PATH.stat().st_mode | 0o111)
+
+    bin_dir = Path.home() / ".local" / "bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    link = bin_dir / "granola-sync"
+    if not link.exists() or (link.is_symlink() and link.resolve() != SCRIPT_PATH):
+        if link.exists() or link.is_symlink():
+            link.unlink()
+        link.symlink_to(SCRIPT_PATH)
+        print(f"  Linked: granola-sync → {SCRIPT_PATH}")
+
+
+def ensure_skill():
+    """Symlink the skill into each detected client's skills directory."""
+    skill_src = SCRIPT_DIR / "skills" / "granola-sync"
+    for client, skills_dir in SKILL_CLIENTS.items():
+        if not skills_dir.parent.exists():
+            continue
+        skills_dir.mkdir(parents=True, exist_ok=True)
+        link = skills_dir / "granola-sync"
+        if not link.exists() or (link.is_symlink() and link.resolve() != skill_src.resolve()):
+            if link.exists() or link.is_symlink():
+                link.unlink()
+            link.symlink_to(skill_src)
+            print(f"  Linked: {client} skill → {skill_src}")
 
 
 def setup():
-    """Symlink granola-sync to ~/.local/bin/."""
+    """Symlink granola-sync to ~/.local/bin/ and install the skill."""
     print("Setting up granola-sync...")
-
-    # Make script executable
-    SCRIPT_PATH.chmod(SCRIPT_PATH.stat().st_mode | 0o111)
-
-    # Symlink to ~/.local/bin/granola-sync
-    BIN_DIR.mkdir(parents=True, exist_ok=True)
-    if BIN_LINK.exists() or BIN_LINK.is_symlink():
-        BIN_LINK.unlink()
-    BIN_LINK.symlink_to(SCRIPT_PATH)
-    print(f"  Symlinked granola-sync → {SCRIPT_PATH}")
-
+    ensure_command()
+    ensure_skill()
     print()
     print("Done. Make sure ~/.local/bin is in your PATH, then run:")
     print("  GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts")
@@ -243,7 +266,7 @@ def main():
     parser.add_argument(
         "--setup",
         action="store_true",
-        help="Symlink granola-sync to ~/.local/bin/",
+        help="Install the CLI and skill, then exit.",
     )
     parser.add_argument(
         "--output-dir",
