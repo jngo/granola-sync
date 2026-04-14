@@ -23,11 +23,11 @@ Re-runs skip already-cached notes, so only new transcripts are fetched.
 
 ### Claude Code skill
 
-`SKILL.md` defines a [Claude Code](https://claude.ai/code) skill that wraps `granola.py`. Install it to use `/granola-sync` directly from Claude Code:
+`skills/granola-sync/SKILL.md` defines a [Claude Code](https://claude.ai/code) skill. Install it to use `/granola-sync` directly from Claude Code:
 
 ```bash
-# 1. Copy the skill into your Claude skills directory
-cp -r . ~/.claude/skills/granola-sync
+# 1. Symlink the skill into your Claude skills directory
+ln -s "$(pwd)/skills/granola-sync" ~/.claude/skills/granola-sync
 
 # 2. Add your API key
 cp .env.example ~/.claude/skills/granola-sync/.env
@@ -38,7 +38,7 @@ python3 -m venv ~/.claude/skills/granola-sync/scripts/.venv
 ~/.claude/skills/granola-sync/scripts/.venv/bin/pip install requests -q
 ```
 
-Then in Claude Code, run `/granola-sync` and follow the prompts.
+Then in Claude Code, run `/granola-sync` and follow the prompts. Because it's a symlink, any updates you pull from this repo are immediately reflected in the skill.
 
 ---
 
