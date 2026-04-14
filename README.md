@@ -1,4 +1,4 @@
-# granola-export
+# granola-sync
 
 Export [Granola](https://www.granola.ai) meeting transcripts as Markdown files, with YAML front matter suitable for use in an Obsidian vault or with AI agents.
 
@@ -12,11 +12,11 @@ Requires Python 3 (standard library only — no dependencies to install).
 
 ```bash
 # 1. Clone the repo and symlink the skill
-git clone https://github.com/jngo/granola-export.git
-ln -s "$(pwd)/granola-export/skills/granola-sync" ~/.claude/skills/granola-sync
+git clone https://github.com/jngo/granola-sync.git
+ln -s "$(pwd)/granola-sync/skills/granola-sync" ~/.claude/skills/granola-sync
 
 # 2. Add your API key
-cp granola-export/.env.example granola-export/.env
+cp granola-sync/.env.example granola-sync/.env
 # Edit .env and set GRANOLA_API_KEY
 
 # 3. Register the CLI
@@ -77,16 +77,6 @@ source: Granola
 - `**You**` is audio from your microphone; `**Them**` is system audio (other participants).
 - Consecutive segments from the same speaker are merged into single utterances.
 - Colons in titles are replaced: `Title: Subtitle` → `Title — Subtitle`, `1:1` → `1-1`.
-
----
-
-## Setup
-
-```bash
-pip install requests
-```
-
-Get your API key from Granola → Settings → API → Create new key.
 
 ---
 
