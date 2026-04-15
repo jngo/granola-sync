@@ -24,7 +24,8 @@ from pathlib import Path
 # --- Setup ---
 
 SCRIPT_PATH = Path(__file__).resolve()
-SCRIPT_DIR = SCRIPT_PATH.parent
+SCRIPT_DIR = SCRIPT_PATH.parent  # skills/granola-sync/ — this file lives inside the skill
+ENV_FILE = SCRIPT_DIR / ".env"
 
 SKILL_CLIENTS = {
     "claude": Path.home() / ".claude" / "skills",
@@ -47,8 +48,8 @@ def ensure_command():
 
 
 def ensure_skill():
-    """Symlink the skill into each detected client's skills directory."""
-    skill_src = SCRIPT_DIR / "skills" / "granola-sync"
+    """Symlink the skill directory into each detected client's skills directory."""
+    skill_src = SCRIPT_DIR  # this file lives inside the skill directory
     for client, skills_dir in SKILL_CLIENTS.items():
         if not skills_dir.parent.exists():
             continue
@@ -61,20 +62,59 @@ def ensure_skill():
             print(f"  Linked: {client} skill → {skill_src}")
 
 
+def ensure_api_key():
+    """Prompt for an API key if .env doesn't exist, then write it."""
+    if ENV_FILE.exists():
+        return
+
+    print()
+    print("  Get your API key from Granola → Settings → API → Create new key.")
+    print("  GRANOLA_API_KEY: ", end="", flush=True)
+
+    try:
+        with open("/dev/tty") as tty:
+            api_key = tty.readline().strip()
+    except OSError:
+        api_key = input().strip()
+
+    if api_key:
+        ENV_FILE.write_text(f"GRANOLA_API_KEY={api_key}\n")
+        print(f"  Saved: {ENV_FILE}")
+    else:
+        print(f"  Skipped. Add GRANOLA_API_KEY to {ENV_FILE} before running.")
+
+
 def setup():
-    """Symlink granola-sync to ~/.local/bin/ and install the skill."""
     print("Setting up granola-sync...")
     ensure_command()
     ensure_skill()
+    ensure_api_key()
     print()
     print("Done. Make sure ~/.local/bin is in your PATH, then run:")
-    print("  GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts")
+    print("  granola-sync --output-dir ./transcripts")
 
 
 # --- API ---
 
 BASE_URL = "https://public-api.granola.ai"
 REQUEST_DELAY = 0.25  # seconds between requests; burst: 25 req/5s, sustained: 5 req/s
+
+
+def load_api_key() -> str:
+    """Return the API key from the environment or .env file."""
+    key = os.environ.get("GRANOLA_API_KEY")
+    if key:
+        return key
+
+    if ENV_FILE.exists():
+        for line in ENV_FILE.read_text().splitlines():
+            if line.startswith("GRANOLA_API_KEY="):
+                return line.split("=", 1)[1].strip()
+
+    print("Error: GRANOLA_API_KEY is not set.")
+    print(f"Add it to {ENV_FILE} or pass it as an environment variable.")
+    print("Get your key from Granola → Settings → API → Create new key.")
+    sys.exit(1)
 
 
 def api_get(path: str, api_key: str, params: dict | None = None) -> dict:
@@ -130,7 +170,7 @@ def get_note_with_transcript(api_key: str, note_id: str) -> dict:
 # --- Markdown conversion ---
 
 def iso_timestamp(raw: str) -> str:
-    """Normalise an ISO datetime string to YYYY-MM-DDTHH:MM:SSZ, stripping milliseconds."""
+    """Normalise an ISO datetime string to YYYY-MM-DDTHH:MM:SSZ."""
     if not raw:
         return ""
     ts = raw[:19]
@@ -261,7 +301,6 @@ def main():
     parser = argparse.ArgumentParser(
         description="Export Granola meeting transcripts as Markdown.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="Set GRANOLA_API_KEY to your API key before running.",
     )
     parser.add_argument(
         "--setup",
@@ -285,14 +324,8 @@ def main():
         setup()
         return
 
-    api_key = os.environ.get("GRANOLA_API_KEY")
-    if not api_key:
-        print("Error: GRANOLA_API_KEY environment variable not set.")
-        print("Get your key from Granola → Settings → API → Create new key")
-        sys.exit(1)
-
     export(
-        api_key=api_key,
+        api_key=load_api_key(),
         output_dir=Path(args.output_dir),
         skip_existing=not args.overwrite,
     )
