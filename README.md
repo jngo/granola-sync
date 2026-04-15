@@ -6,30 +6,44 @@ Requires a Granola account on the **Business or Enterprise** plan.
 
 ---
 
-## Setup
+## Install
 
-Requires Python 3 (standard library only — no dependencies to install).
+Requires Python 3 and Git (standard library only — no other dependencies).
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/jngo/granola-sync.git
-
-# 2. Add your API key
-cp granola-sync/.env.example granola-sync/.env
-# Edit .env and set GRANOLA_API_KEY
-
-# 3. Run setup
-python3 granola-sync/granola.py --setup
+curl -fsSL https://raw.githubusercontent.com/jngo/granola-sync/main/install.sh | bash
 ```
 
-This makes the script executable, symlinks `granola-sync` to `~/.local/bin/`, and installs the Claude Code skill. Make sure `~/.local/bin` is in your `PATH`.
+This clones the repo to `~/.local/share/granola-sync`, symlinks `granola-sync` to `~/.local/bin/`, installs the Claude Code skill, and prompts for your API key. Make sure `~/.local/bin` is in your `PATH`.
+
+Alternatively, install the skill directly via the [skills CLI](https://agentskills.io):
+
+```bash
+npx skills add jngo/granola-sync
+```
+
+Then run `python3 ~/.agents/skills/granola-sync/granola.py --setup` to wire up the CLI and save your API key.
+
+### API key
+
+Get your key from Granola → Settings → API → Create new key. The install prompts for it automatically and saves it to `.env` in the skill directory.
+
+### Updates
+
+Re-run the install command to pull the latest version:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/jngo/granola-sync/main/install.sh | bash
+```
+
+---
 
 ## Usage
 
 ### CLI
 
 ```bash
-GRANOLA_API_KEY=grn_... granola-sync --output-dir ./transcripts
+granola-sync --output-dir ./transcripts
 ```
 
 | Flag | Default | Description |
@@ -41,7 +55,7 @@ Re-runs skip already-cached notes, so only new transcripts are fetched.
 
 ### Claude Code skill
 
-Run `/granola-sync` in Claude Code and follow the prompts. Because the skill is a symlink back to this repo, updates pulled with `git pull` are reflected immediately — no reinstall needed.
+Run `/granola-sync` in Claude Code and follow the prompts. Because the skill is symlinked back to the install directory, updates are reflected immediately after pulling.
 
 ---
 
